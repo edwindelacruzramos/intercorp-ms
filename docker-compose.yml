@@ -75,6 +75,24 @@ services:
     ports:
       - "8082:8082"
 
+  ms04-api-rest:
+    build:
+      context: ./ms04-api-rest
+      dockerfile: Dockerfile
+    container_name: ms04-api-rest
+    depends_on:
+      - kafka
+    networks:
+      - custom_bs_server_network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://10.10.100.9:3306/db_ms04_kafka
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: rootpass
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      APP_KAFKA_TOPIC: kafka-topic-02
+    ports:
+      - "8083:8083"
+
 networks:
   custom_bs_server_network:
     external: true

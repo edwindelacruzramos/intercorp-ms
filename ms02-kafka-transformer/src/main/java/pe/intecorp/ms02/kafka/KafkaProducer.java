@@ -13,7 +13,7 @@ public class KafkaProducer {
 
     private final KafkaTemplate<String, String> kafkaTemplate;
 
-    @Value("${app.kafka-topic-out}")
+    @Value("${app.kafka-topic-output}")
     private String kafkaTopicOut;
 
     public void send(String message) {

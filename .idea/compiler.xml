@@ -12,13 +12,14 @@
         </processorPath>
         <module name="ms05-xml-producer" />
       </profile>
-      <profile name="Annotation profile for ms02-kafka-transformer" enabled="true">
+      <profile name="Annotation profile for ms04-api-rest" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.38/lombok-1.18.38.jar" />
         </processorPath>
+        <module name="ms04-api-rest" />
         <module name="ms02-kafka-transformer" />
         <module name="ms01-kafka-consumer" />
       </profile>
@@ -28,6 +29,7 @@
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="ms01-kafka-consumer" options="-parameters" />
       <module name="ms02-kafka-transformer" options="-parameters" />
+      <module name="ms04-api-rest" options="-parameters" />
       <module name="ms05-xml-producer" options="-parameters" />
     </option>
   </component>

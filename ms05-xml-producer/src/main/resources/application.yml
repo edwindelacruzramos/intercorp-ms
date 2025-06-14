@@ -1,0 +1,14 @@
+spring:
+  kafka:
+    bootstrap-servers: kafka:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+app:
+  xml-path: src/main/resources/data/xml/
+  kafka-topic: kafka-topic-01
+
+logging:
+  level:
+    root: INFO

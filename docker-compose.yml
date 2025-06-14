@@ -1,0 +1,80 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: zookeeper
+    networks:
+      - custom_bs_server_network
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    networks:
+      - custom_bs_server_network
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+  ms05-xml-producer:
+    build:
+      context: ./ms05-xml-producer
+      dockerfile: Dockerfile
+    container_name: ms05-xml-producer
+    depends_on:
+      - kafka
+    networks:
+      - custom_bs_server_network
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      APP_KAFKA_TOPIC: kafka-topic-01
+    ports:
+      - "8080:8080"
+
+  ms01-kafka-consumer:
+    build:
+      context: ./ms01-kafka-consumer
+      dockerfile: Dockerfile
+    container_name: ms01-kafka-consumer
+    depends_on:
+      - kafka
+    networks:
+      - custom_bs_server_network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://10.10.100.9:3306/db_ms01_kafka
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: rootpass
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      APP_KAFKA_TOPIC: kafka-topic-01
+    ports:
+      - "8081:8081"
+
+  ms02-kafka-transformer:
+    build:
+      context: ./ms02-kafka-transformer
+      dockerfile: Dockerfile
+    container_name: ms02-kafka-transformer
+    depends_on:
+      - kafka
+    networks:
+      - custom_bs_server_network
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      APP_KAFKA_TOPIC_INPUT: kafka-topic-01
+      APP_KAFKA_TOPIC_OUTPUT: kafka-topic-02
+    ports:
+      - "8082:8082"
+
+networks:
+  custom_bs_server_network:
+    external: true

@@ -2,21 +2,19 @@ services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
     container_name: zookeeper
-    networks:
-      - custom_bs_server_network
     ports:
       - "2181:2181"
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - custom_bs_server_network
 
   kafka:
     image: confluentinc/cp-kafka:7.6.0
     container_name: kafka
     depends_on:
       - zookeeper
-    networks:
-      - custom_bs_server_network
     ports:
       - "9092:9092"
     environment:
@@ -25,6 +23,25 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - custom_bs_server_network
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - custom_bs_server_network
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   ms05-xml-producer:
     build:
@@ -33,13 +50,13 @@ services:
     container_name: ms05-xml-producer
     depends_on:
       - kafka
-    networks:
-      - custom_bs_server_network
+    ports:
+      - "8080:8080"
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       APP_KAFKA_TOPIC: kafka-topic-01
-    ports:
-      - "8080:8080"
+    networks:
+      - custom_bs_server_network
 
   ms01-kafka-consumer:
     build:
@@ -48,16 +65,17 @@ services:
     container_name: ms01-kafka-consumer
     depends_on:
       - kafka
-    networks:
-      - custom_bs_server_network
+      - mysql
+    ports:
+      - "8081:8081"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://10.10.100.9:3306/db_ms01_kafka
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/db_ms01_kafka
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: rootpass
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       APP_KAFKA_TOPIC: kafka-topic-01
-    ports:
-      - "8081:8081"
+    networks:
+      - custom_bs_server_network
 
   ms02-kafka-transformer:
     build:
@@ -66,14 +84,14 @@ services:
     container_name: ms02-kafka-transformer
     depends_on:
       - kafka
-    networks:
-      - custom_bs_server_network
+    ports:
+      - "8082:8082"
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       APP_KAFKA_TOPIC_INPUT: kafka-topic-01
       APP_KAFKA_TOPIC_OUTPUT: kafka-topic-02
-    ports:
-      - "8082:8082"
+    networks:
+      - custom_bs_server_network
 
   ms04-api-rest:
     build:
@@ -81,18 +99,36 @@ services:
       dockerfile: Dockerfile
     container_name: ms04-api-rest
     depends_on:
-      - kafka
-    networks:
-      - custom_bs_server_network
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    ports:
+      - "8083:8083"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://10.10.100.9:3306/db_ms04_kafka
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/db_ms04_kafka
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: rootpass
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       APP_KAFKA_TOPIC: kafka-topic-02
+    networks:
+      - custom_bs_server_network
+
+  frontend:
+    build:
+      context: ./intercorp-ui
+      dockerfile: Dockerfile
+    container_name: frontend-angular
+    depends_on:
+      - ms04-api-rest
     ports:
-      - "8083:8083"
+      - "4200:80"
+    networks:
+      - custom_bs_server_network
 
 networks:
   custom_bs_server_network:
     external: true
+
+volumes:
+  mysql_data:
